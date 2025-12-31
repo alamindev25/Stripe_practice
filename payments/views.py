@@ -14,6 +14,8 @@ from django.http import JsonResponse
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+
+
 # Frontend Payment Page
 def payment_page(request):
     return render(request, "payments/pay.html", {"stripe_publishable_key": settings.STRIPE_PUBLISHABLE_KEY})
