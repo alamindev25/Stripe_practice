@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Webhook Test Dashboard</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .webhook-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .test-button { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .logs { background: #000; color: #0f0; padding: 15px; border-radius: 4px; font-family: monospace; height: 300px; overflow-y: scroll; }
+        .step { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔔 Stripe Webhook Testing Dashboard</h1>
+    
+    <div class="webhook-info">
+        <h3>Webhook Endpoint:</h3>
+        <code>{{ request.build_absolute_uri|slice:":-1" }}/payments/webhook/</code>
+    </div>
+    
+    <div class="step">
+        <h3>Step 1: Test Webhook Locally</h3>
+        <p>আপনার server running আছে। এখন webhook test করুন:</p>
+        <button class="test-button" onclick="testWebhook()">Test Webhook</button>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Check Webhook Logs</h3>
+        <p>Server terminal এ webhook logs দেখুন।</p>
+        <button class="test-button" onclick="refreshLogs()">Refresh Logs</button>
+    </div>
+    
+    <div class="step">
+        <h3>Step 3: Database Status</h3>
+        <button class="test-button" onclick="checkPayments()">Check Payments</button>
+        <div id="payment-results"></div>
+    </div>
+    
+    <div class="logs" id="logs">
+        <div>🟢 Webhook dashboard loaded...</div>
+        <div>⏳ Waiting for webhook events...</div>
+    </div>
+</div>
+
+<script>
+async function testWebhook() {
+    addLog('🚀 Testing webhook...');
+    
+    const testData = {
+        id: 'evt_test_webhook_' + Date.now(),
+        type: 'payment_intent.succeeded',
+        data: {
+            object: {
+                id: 'pi_test_payment_intent_' + Date.now(),
+                amount: 1500,
+                currency: 'usd',
+                status: 'succeeded'
+            }
+        }
+    };
+    
+    try {
+        const response = await fetch('/payments/webhook/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(testData)
+        });
+        
+        const result = await response.json();
+        addLog(`✅ Webhook response: ${JSON.stringify(result)}`);
+        addLog(`📊 Status: ${response.status}`);
+        
+    } catch (error) {
+        addLog(`❌ Webhook error: ${error.message}`);
+    }
+}
+
+async function checkPayments() {
+    addLog('🔍 Checking payment database...');
+    try {
+        const response = await fetch('/payments/api/payments/');
+        if (response.ok) {
+            const payments = await response.json();
+            document.getElementById('payment-results').innerHTML = 
+                `<pre>${JSON.stringify(payments, null, 2)}</pre>`;
+            addLog(`📋 Found ${payments.length || 0} payments`);
+        } else {
+            addLog('⚠️ Cannot fetch payments (API endpoint not implemented)');
+        }
+    } catch (error) {
+        addLog(`❌ Error checking payments: ${error.message}`);
+    }
+}
+
+function addLog(message) {
+    const logs = document.getElementById('logs');
+    const time = new Date().toLocaleTimeString();
+    logs.innerHTML += `<div>[${time}] ${message}</div>`;
+    logs.scrollTop = logs.scrollHeight;
+}
+
+function refreshLogs() {
+    addLog('🔄 Logs refreshed at ' + new Date().toLocaleString());
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    addLog('🔄 Auto-refresh...');
+}, 30000);
+</script>
+
+</body>
+</html>
